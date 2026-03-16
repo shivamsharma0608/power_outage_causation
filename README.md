@@ -3,7 +3,6 @@
 **By Shivam Sharma**
 
 ---
-
 ## Introduction
 
 This project analyzes a dataset of major power outages in the continental U.S.
@@ -57,12 +56,13 @@ categories like severe weather vary strongly by time of year.
 Here is the head of the cleaned DataFrame:
 
 | YEAR | U.S._STATE | CAUSE.CATEGORY | OUTAGE.DURATION | SEASON |
-|---:|:---|:---|---:|:---|
+| --- | --- | --- | --- | --- |
 | 2011 | Minnesota | severe weather | 3060 | Summer |
 | 2014 | Minnesota | intentional attack | 1 | Spring |
 | 2010 | Minnesota | severe weather | 3000 | Fall |
 | 2012 | Minnesota | severe weather | 2550 | Summer |
 | 2015 | Minnesota | severe weather | 1740 | Summer |
+
 ### Univariate Analysis
 
 <iframe src="assets/cause_distribution.html" width="800" height="500" frameborder="0"></iframe>
