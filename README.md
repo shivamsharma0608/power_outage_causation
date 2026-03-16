@@ -1,7 +1,4 @@
-# Behind the Blackout: Uncovering the Causes of Major U.S. Power Outages
-
-**By Shivam Sharma**
-
+# **By Shivam Sharma**
 ---
 
 ## Introduction
@@ -56,14 +53,13 @@ categories like severe weather vary strongly by time of year.
 
 Here is the head of the cleaned DataFrame:
 
-|   YEAR | U.S._STATE   | CLIMATE.REGION     | CAUSE.CATEGORY     |   OUTAGE.DURATION |   CUSTOMERS.AFFECTED | SEASON   |
-|-------:|:-------------|:-------------------|:-------------------|------------------:|---------------------:|:---------|
-|   2011 | Minnesota    | East North Central | severe weather     |              3060 |                70000 | Summer   |
-|   2014 | Minnesota    | East North Central | intentional attack |                 1 |                  nan | Spring   |
-|   2010 | Minnesota    | East North Central | severe weather     |              3000 |                70000 | Fall     |
-|   2012 | Minnesota    | East North Central | severe weather     |              2550 |                68200 | Summer   |
-|   2015 | Minnesota    | East North Central | severe weather     |              1740 |               250000 | Summer   |
-
+| YEAR | U.S._STATE | CAUSE.CATEGORY | OUTAGE.DURATION | SEASON |
+|---:|:---|:---|---:|:---|
+| 2011 | Minnesota | severe weather | 3060 | Summer |
+| 2014 | Minnesota | intentional attack | 1 | Spring |
+| 2010 | Minnesota | severe weather | 3000 | Fall |
+| 2012 | Minnesota | severe weather | 2550 | Summer |
+| 2015 | Minnesota | severe weather | 1740 | Summer |
 ### Univariate Analysis
 
 <iframe src="assets/cause_distribution.html" width="800" height="500" frameborder="0"></iframe>
