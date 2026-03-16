@@ -35,6 +35,11 @@ The relevant columns for our analysis are:
 | `TOTAL.PRICE` | Average electricity price in the state (cents/kWh) |
 | `SEASON` | Season the outage occurred (engineered from `OUTAGE.START`) |
 
+
+Power outages cost the U.S. economy an estimated $150 billion per year. 
+Understanding what drives them — and being able to predict their cause the 
+moment they are detected — can help utilities respond faster, reduce damage, 
+and protect critical infrastructure.
 ---
 
 ## Data Cleaning and Exploratory Data Analysis
@@ -100,6 +105,14 @@ outages. Severe weather dominates in most regions, but intentional attacks are
 proportionally more prominent in the West and Northwest, suggesting geographic 
 patterns in grid vulnerability that our classifier should be able to exploit.
 
+<iframe src="assets/anomaly_by_cause.html" width="800" height="500" frameborder="0"></iframe>
+
+Severe weather outages tend to occur at more extreme anomaly levels (both positive 
+and negative), suggesting they are associated with El Niño and La Niña climate 
+episodes. Intentional attacks show a tighter, near-zero distribution, confirming 
+they are not climate-dependent — a finding that directly supports our classifier 
+using `ANOMALY.LEVEL` as a feature to distinguish these cause types.
+
 ### Interesting Aggregates
 
 The table below shows the **median number of customers affected**, broken down by 
@@ -127,62 +140,78 @@ in certain seasons, reflecting their rarity.
 
 ### MNAR Analysis
 
-We believe the `CAUSE.CATEGORY.DETAIL` column is **MNAR** (Missing Not at Random). 
-When outages are caused by intentional attacks or other sensitive events, operators 
-may deliberately withhold specific details to avoid revealing security 
-vulnerabilities in the grid. This means the missingness of the detail column is 
-related to the actual value of the missing data itself — a defining characteristic 
-of MNAR. To make this column MAR, we would want access to NERC incident reports 
-or federal filings that could explain why details were omitted for specific events.
+The `CAUSE.CATEGORY.DETAIL` column is likely **MNAR** (Missing Not at Random). 
+When broken down by cause category, `islanding` and `public appeal` events have 
+a **100% missingness rate** in this column, while `intentional attack` is missing 
+only 11.5% of the time. This pattern cannot be explained by any other observed 
+variable in the dataset — the missingness is directly related to the value of 
+the cause itself, which is the defining characteristic of MNAR. Operators likely 
+omit details for islanding and public appeal events because no specific incident 
+detail applies to those cause types. To make this column MAR, we would want 
+access to NERC incident report filings, which would reveal whether the absence 
+of detail was a deliberate omission or simply not applicable.
 
 ### Missingness Dependency
 
-We analyzed the missingness of `CUSTOMERS.AFFECTED` (missing in 42.7% of rows) 
-against two other columns using permutation tests.
+We analyze the missingness of `CUSTOMERS.AFFECTED`, which is missing in 
+**655 of 1,534 rows (42.7%)**. The missingness rate varies dramatically by cause: 
+intentional attacks are missing 95.5% of the time, while severe weather outages 
+are missing only 7.2% of the time — a difference that is unlikely to be random.
 
 **Depends on: `CAUSE.CATEGORY`**  
-We used Total Variation Distance (TVD) as our test statistic since `CAUSE.CATEGORY` 
-is categorical. Our observed TVD was **0.7558** with a p-value of **< 0.001**. 
-Since p < 0.05, we conclude that the missingness of `CUSTOMERS.AFFECTED` **does** 
-depend on `CAUSE.CATEGORY` — intentional attack outages, for instance, are far 
-more likely to have missing customer counts than severe weather outages.
+We used TVD as our test statistic since `CAUSE.CATEGORY` is categorical. Our 
+observed TVD was **0.7558** with a p-value of **< 0.001** across 500 permutations. 
+Since p < 0.05, the missingness of `CUSTOMERS.AFFECTED` **does** depend on 
+`CAUSE.CATEGORY`. This makes sense from the data generating process: utilities 
+may not report customer counts for intentional attacks to avoid revealing the 
+scale of grid vulnerabilities.
 
 **Does not depend on: `ANOMALY.LEVEL`**  
-We used the absolute difference in means as our test statistic since 
-`ANOMALY.LEVEL` is numeric. Our observed difference was **0.0497** with a 
-p-value of **0.18**. Since p > 0.05, we conclude that the missingness of 
-`CUSTOMERS.AFFECTED` **does not** depend on `ANOMALY.LEVEL` — the climate 
-anomaly index at the time of an outage has no bearing on whether customer 
-counts are recorded.
+We used absolute difference in means since `ANOMALY.LEVEL` is numeric. Our 
+observed difference was **0.0497** with a p-value of **0.198**. Since p > 0.05, 
+the missingness of `CUSTOMERS.AFFECTED` **does not** depend on the climate 
+anomaly level at the time of the outage — whether it is an El Niño or La Niña 
+year has no bearing on whether customer counts get recorded.
 
 <iframe src="assets/missingness_permtest.html" width="800" height="500" frameborder="0"></iframe>
+
+<iframe src="assets/missingness_distribution.html" width="800" height="500" frameborder="0"></iframe>
+
+The distribution of `ANOMALY.LEVEL` is nearly identical whether `CUSTOMERS.AFFECTED` 
+is missing or not, visually confirming our permutation test result that these 
+two variables are independent.
 
 ---
 
 ## Hypothesis Testing
 
-**Question:** Do severe weather outages affect more customers on average than 
-intentional attack outages?
+**Question:** Do severe weather outages last significantly longer than intentional 
+attack outages?
 
-**Null Hypothesis:** The distribution of customers affected is the same for 
-severe weather and intentional attack outages. Any observed difference is due 
-to random chance.
+**Null Hypothesis:** The distribution of outage durations is the same for severe 
+weather and intentional attack outages. Any observed difference in median duration 
+is due to random chance.
 
-**Alternative Hypothesis:** Severe weather outages affect more customers on 
-average than intentional attack outages.
+**Alternative Hypothesis:** Severe weather outages have longer median durations 
+than intentional attack outages.
 
-**Test Statistic:** Difference in group means (severe weather mean minus 
-intentional attack mean). We chose this because we are comparing a numeric 
-variable across two groups and have a directional alternative hypothesis.
+**Test Statistic:** Difference in group medians (severe weather minus intentional 
+attack). We chose median over mean because `OUTAGE.DURATION` is heavily 
+right-skewed with extreme outliers, making median a more robust measure of center. 
+A directional test is appropriate because our alternative hypothesis specifically 
+predicts one group is longer, not merely different.
 
-**Significance Level:** 0.05
+**Significance Level:** 0.05 — the standard threshold that balances false 
+positive risk against the cost of missing a real effect.
 
-**Result:** Our observed difference was **172,219 customers**. After 1,000 
-permutations, we obtained a p-value of **< 0.001**. Since p < 0.05, we 
-**reject the null hypothesis**. This suggests that severe weather outages 
-**do** affect significantly more customers than intentional attack outages on 
-average, and this difference is extremely unlikely to be due to random chance. 
-This aligns with the targeted vs. broad-impact nature of these two cause types.
+**Result:** The severe weather median duration was **2,464 minutes** vs. 
+**92 minutes** for intentional attacks — an observed difference of **2,372 minutes**. 
+After 1,000 permutations, we obtained a p-value of **< 0.001**. Since p < 0.05, 
+we reject the null hypothesis. This suggests that severe weather outages tend to 
+last substantially longer than intentional attack outages, though we cannot 
+conclude this is a causal relationship. The result is consistent with our 
+intuition: physical infrastructure damage from storms requires extensive field 
+repairs, while targeted attacks can often be isolated and resolved more quickly.
 
 <iframe src="assets/hypothesis_test.html" width="800" height="500" frameborder="0"></iframe>
 
@@ -191,25 +220,30 @@ This aligns with the targeted vs. broad-impact nature of these two cause types.
 ## Framing a Prediction Problem
 
 We aim to **predict the cause category (`CAUSE.CATEGORY`) of a power outage** — 
-a multiclass classification problem with 7 possible classes: severe weather, 
+a **multiclass classification** problem with 7 possible classes: severe weather, 
 intentional attack, system operability disruption, public appeal, equipment 
 failure, fuel supply emergency, and islanding.
 
-We chose `CAUSE.CATEGORY` as our response variable because identifying the likely 
-cause of an outage at the moment it begins allows utility companies and emergency 
-responders to allocate resources appropriately and respond faster.
+We chose `CAUSE.CATEGORY` as our response variable because it is the core of 
+our EDA question — understanding what characteristics are associated with each 
+cause. A classifier that can predict cause at the moment an outage is detected 
+allows utility companies to dispatch the right response team immediately.
 
-We evaluate our model using **weighted F1-score** rather than accuracy because 
-the classes are heavily imbalanced — severe weather accounts for nearly 50% of 
-outages, so a naive classifier that always predicts severe weather would achieve 
-high accuracy while being useless for minority classes. Weighted F1 accounts for 
-this imbalance by weighting each class's F1 score by its support.
+We evaluate using **weighted F1-score** over other metrics for the following 
+reasons. Accuracy is misleading here because the classes are heavily imbalanced 
+— a naive classifier that always predicts "severe weather" would achieve ~50% 
+accuracy while failing on every other class. Macro F1 treats all 7 classes 
+equally regardless of how frequently they appear, which over-weights rare classes 
+like islanding (46 examples) relative to severe weather (763 examples). Weighted 
+F1 computes F1 per class and averages by support, rewarding good performance 
+proportionally to how often each class actually occurs.
 
-Features used are limited to information available **at the time an outage begins**: 
-location, climate region, season, urbanization, and electricity price. We 
-explicitly exclude `OUTAGE.DURATION`, `DEMAND.LOSS.MW`, and `CUSTOMERS.AFFECTED` 
-since these are only known after the outage ends.
-
+All features used are limited to information available **at the moment an outage 
+begins**: static geographic properties (`CLIMATE.REGION`, `NERC.REGION`), 
+published climate data (`ANOMALY.LEVEL`), the outage start timestamp (`SEASON`), 
+and state-level demographic and economic data (`POPPCT_URBAN`, `TOTAL.PRICE`). 
+We explicitly exclude `OUTAGE.DURATION`, `DEMAND.LOSS.MW`, and 
+`CUSTOMERS.AFFECTED` — all of which are only known after the outage ends.
 ---
 
 ## Baseline Model
@@ -217,55 +251,66 @@ since these are only known after the outage ends.
 Our baseline model is a **Logistic Regression classifier** implemented in a 
 single `sklearn` Pipeline. It uses two features:
 
-- `CLIMATE.REGION` — nominal, one-hot encoded with `OneHotEncoder`
-- `ANOMALY.LEVEL` — quantitative, standardized with `StandardScaler`
+- `CLIMATE.REGION` — **nominal**, one-hot encoded with `OneHotEncoder` into 9 
+binary indicator columns (one per climate region). One-hot encoding is appropriate 
+here because climate regions have no natural ordering.
+- `ANOMALY.LEVEL` — **quantitative**, standardized with `StandardScaler` to zero 
+mean and unit variance. Standardization helps Logistic Regression converge and 
+ensures this feature is on the same scale as the encoded indicators.
 
 **Performance:**
-- Train Accuracy: 0.5683
-- Test Accuracy: 0.5921
-- Test Weighted F1: 0.4951
 
-We do not consider this baseline model to be particularly good. With only two 
-features and a linear classifier, it cannot capture the complex interactions 
-between geography, climate, and outage cause. A weighted F1 of 0.4951 indicates 
-the model struggles especially with minority classes like fuel supply emergency 
-and islanding. However, it establishes a meaningful performance floor to improve upon.
+| Split | Weighted F1 | Accuracy |
+|---|---|---|
+| Train | 0.4761 | 0.5683 |
+| Test | 0.4951 | 0.5921 |
+
+The train and test F1 scores are nearly identical (gap of -0.019), indicating 
+the model generalizes well — but it is simply underfitting rather than overfitting. 
+We do not consider this a good model. On the test set, it only predicts two of 
+the seven possible classes ("severe weather" and "intentional attack"), completely 
+failing on five minority classes. With only two features and a linear classifier, 
+it lacks the complexity to distinguish cause categories that overlap in 
+geographic and climate space. It does, however, meaningfully beat the majority 
+class baseline F1 of 0.3297, confirming that climate region carries some 
+predictive signal.
 
 ---
 
 ## Final Model
 
 We improved upon the baseline by switching to a **Random Forest classifier** 
-and engineering four additional features:
+and adding four features to the baseline's two:
 
-- `SEASON` (nominal) — Outage causes vary strongly by season; severe weather 
-spikes in summer and winter while equipment failures are more evenly distributed. 
-Derived from the `OUTAGE.START` timestamp.
-- `NERC.REGION` (nominal) — Different reliability regions have different 
-infrastructure ages and regulatory environments, which affects cause likelihood. 
-For example, the WECC region has disproportionately more intentional attacks.
-- `POPPCT_URBAN` (quantitative) — Urban areas are more likely targets of 
-intentional attacks due to higher infrastructure concentration, while rural areas 
-tend to see more equipment failures and severe weather impacts.
-- `TOTAL.PRICE` (quantitative) — Electricity price reflects economic and 
-infrastructure conditions; areas with higher prices may have older infrastructure 
-(more equipment failures) or be more susceptible to fuel supply disruptions.
+- `SEASON` (nominal, OHE) — Outage causes vary strongly by season; severe 
+weather spikes in summer and winter, while equipment failures are more uniform. 
+Derived from `OUTAGE.START` timestamp.
+- `NERC.REGION` (nominal, OHE) — The WECC (Western) region has disproportionately 
+more intentional attacks than other regions, a pattern `CLIMATE.REGION` alone 
+cannot capture since multiple NERC regions overlap each climate region.
+- `POPPCT_URBAN` (quantitative, StandardScaler) — Urban areas concentrate 
+infrastructure, making them more likely targets of intentional attacks. Rural 
+areas have more exposed lines prone to weather damage.
+- `TOTAL.PRICE` (quantitative, StandardScaler) — Electricity price reflects 
+regional infrastructure maturity and fuel dependency, both of which correlate 
+with cause type.
 
-We tuned `n_estimators`, `max_depth`, and `min_samples_split` using 
-`GridSearchCV` with 5-fold cross-validation scored on weighted F1.
+We tuned `n_estimators`, `max_depth`, and `min_samples_split` using `GridSearchCV` 
+with 5-fold cross-validation scored on weighted F1. Both baseline and final 
+models were evaluated on the **exact same train/test split** for a valid comparison.
 
 **Best hyperparameters:** `n_estimators=200`, `max_depth=None`, `min_samples_split=2`
 
-**Performance:**
-- Test Weighted F1 (Baseline): 0.4951
-- Test Weighted F1 (Final): 0.6420
-- Improvement: +0.1469
+| Model | Train F1 | Test F1 | Improvement |
+|---|---|---|---|
+| Baseline (Logistic Regression) | 0.4763 | 0.4861 | — |
+| Final (Random Forest) | 0.9211 | 0.6420 | +0.1559 |
 
-The Random Forest substantially outperforms logistic regression because it 
-naturally captures non-linear interactions between features — for example, 
-the combination of NERC region and season is far more predictive of intentional 
-attacks than either feature alone. The best model used fully grown trees 
-(`max_depth=None`), suggesting the feature interactions benefit from deep splits.
+The final model predicts all 7 classes (vs. only 2 for the baseline), with 
+strong performance on severe weather (F1=0.79) and intentional attack (F1=0.73). 
+The train-test gap of 0.28 indicates some overfitting from fully grown trees, 
+but the test F1 improvement of +0.156 over the baseline confirms meaningful 
+generalization.
 
 <iframe src="assets/confusion_matrix.html" width="800" height="600" frameborder="0"></iframe>
 
@@ -273,9 +318,9 @@ attacks than either feature alone. The best model used fully grown trees
 
 ## Fairness Analysis
 
-**Group X:** High urbanization states (`POPPCT_URBAN` ≥ median)  
-**Group Y:** Low urbanization states (`POPPCT_URBAN` < median)  
-**Metric:** Weighted F1-score  
+**Group X:** High urbanization states (`POPPCT_URBAN` ≥ 84.05%, n=159)  
+**Group Y:** Low urbanization states (`POPPCT_URBAN` < 84.05%, n=143)  
+**Metric:** Weighted F1-score
 
 **Null Hypothesis:** Our model is fair. Its weighted F1 for high-urbanization 
 and low-urbanization states are roughly the same, and any differences are due 
@@ -288,18 +333,21 @@ between high-urbanization and low-urbanization states.
 **Significance Level:** 0.05
 
 **Results:**
-- F1 (high urbanization): 0.5704
-- F1 (low urbanization): 0.7198
-- Observed difference: 0.1494
-- p-value: 0.0130
 
-Since p < 0.05, we **reject the null hypothesis**. Our model performs 
-significantly better on outages in low-urbanization states (F1 = 0.72) than 
-high-urbanization states (F1 = 0.57). This is likely because high-urbanization 
-states have a more diverse mix of cause categories — including more intentional 
-attacks — making classification harder, while low-urbanization states are more 
-dominated by severe weather which the model predicts well. This disparity 
-suggests that future work should focus on better features to distinguish cause 
-categories in dense urban areas.
+| Group | Weighted F1 |
+|---|---|
+| High urbanization | 0.5704 |
+| Low urbanization | 0.7198 |
+| Observed difference | 0.1494 |
+| p-value | 0.016 |
+
+Since p = 0.016 < 0.05, we reject the null hypothesis. The evidence suggests 
+our model tends to perform worse on outages in highly urbanized states. This 
+disparity likely reflects the fact that high-urbanization states have a more 
+diverse and harder-to-classify mix of cause categories — including more 
+intentional attacks and system operability disruptions — while low-urbanization 
+states are more dominated by severe weather, which our model predicts well. 
+We cannot conclude this difference is causal, but it points to a meaningful 
+limitation of the model for urban utility operators.
 
 <iframe src="assets/fairness_test.html" width="800" height="500" frameborder="0"></iframe>
