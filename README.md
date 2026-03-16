@@ -78,6 +78,12 @@ within a few thousand minutes, but a small number last tens of thousands of
 minutes. This suggests extreme outlier events driven by catastrophic causes such 
 as fuel supply emergencies or major hurricanes.
 
+<iframe src="assets/outage_map.html" width="800" height="500" frameborder="0"></iframe>
+
+Power outages are concentrated in highly populated states like California, Texas, 
+and Michigan. The West and Northeast show particularly high outage counts, 
+reflecting both dense population centers and aging grid infrastructure.
+
 ### Bivariate Analysis
 
 <iframe src="assets/duration_by_cause.html" width="800" height="500" frameborder="0"></iframe>
