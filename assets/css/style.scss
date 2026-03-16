@@ -1,0 +1,15 @@
+@import "{{ site.theme }}";
+
+body {
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+p, li, td, th {
+  color: #1a1a1a;
+}
+
+h1, h2, h3 {
+  color: #000000;
+  font-weight: 700;
+}
