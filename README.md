@@ -1,4 +1,7 @@
-# **By Shivam Sharma**
+# Behind the Blackout: Uncovering the Causes of Major U.S. Power Outages
+
+**By Shivam Sharma**
+
 ---
 
 ## Introduction
