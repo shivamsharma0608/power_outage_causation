@@ -346,7 +346,7 @@ This project explored what characteristics are associated with each cause catego
 of major U.S. power outages, and built a machine learning model to predict cause 
 at the moment an outage is detected.
 
-THe exploratory analysis revealed clear patterns: severe weather dominates outage 
+The exploratory analysis revealed clear patterns: severe weather dominates outage 
 causes across all regions and seasons, intentional attacks are disproportionately 
 concentrated in the West, and outage duration varies dramatically by cause, with 
 fuel supply emergencies and severe weather lasting far longer than targeted attacks.
