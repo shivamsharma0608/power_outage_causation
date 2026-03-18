@@ -283,7 +283,9 @@ with cause type.
 
 I tuned `n_estimators`, `max_depth`, and `min_samples_split` using `GridSearchCV`
 with 5-fold cross-validation scored on weighted F1. Both models were evaluated on
-the **exact same train/test split** for a valid comparison.
+the **exact same train/test split** for a valid comparison. I also wanted to note 
+that despite the overfit gap, max_depth=None was still chosen by CV because it 
+maximized generalization F1 (CV F1=0.6328 was best)
 
 **Best hyperparameters:** `n_estimators=200`, `max_depth=None`, `min_samples_split=2`
 
