@@ -251,7 +251,7 @@ ensures equal feature scaling.
 | Split | Weighted F1 | Accuracy |
 |---|---|---|
 | Train | 0.4763 | 0.5683 |
-| Test | 0.4861 | 0.5888 |
+| Test | 0.4861 | 0.5921 |
 
 This is not considered a good model. On the test set it only predicts two of
 seven classes ("severe weather" and "intentional attack"), completely failing on
